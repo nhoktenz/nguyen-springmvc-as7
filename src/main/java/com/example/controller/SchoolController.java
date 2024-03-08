@@ -3,9 +3,19 @@ package com.example.controller;
 import com.example.model.Student;
 import com.example.model.Course;
 import com.example.model.Registrar;
+import com.example.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import javax.validation.Valid; 
+import java.util.Collections;
+
+
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +32,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/schoolservice")
+@Validated
 public class SchoolController {
 
     private List<Student> students = new ArrayList<>();
@@ -52,11 +63,48 @@ public class SchoolController {
 
 
     // UC_S1: Instantiate Student object and populate it with data.
-    @PostMapping(value = "/students", produces = "application/json")
-    public ResponseEntity<Student> createStudent(@RequestBody Student student) {
+  @PostMapping(value = "/students", produces = "application/json")
+    public ResponseEntity<?> createStudent(@RequestBody Student student, BindingResult bindingResult) {
+        // Manual validation
+        if (bindingResult.hasErrors()) {
+            // Collect all validation errors
+            List<String> errors = new ArrayList<>();
+            for (FieldError error : bindingResult.getFieldErrors()) {
+                errors.add(error.getDefaultMessage());
+            }
+            // Return the list of validation errors in JSON format
+            return ResponseEntity.badRequest().body(new ErrorResponse(errors));
+        }
+
+        // Check for required fields
+        if (student.getLastName() == null || student.getDateOfBirth() == null || student.getEmail() == null) {
+            // If any required field is null, return a bad request response
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Last name, date of birth, and email are required fields.")));
+        }
+
+        // Perform additional validation for email format
+        if (!isValidEmail(student.getEmail())) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Invalid email format.")));
+        }
+
+        // Perform additional validation for date of birth
+        if (!isValidDateOfBirth(student.getDateOfBirth())) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Date of birth must be in the past.")));
+        }
+
+        // Increment the student ID and set it to the new student
+        int newStudentId = studentCounter.incrementAndGet();
+        student.setStudentId(newStudentId);
+
+        // Add the new student to the list of students
         students.add(student);
+
+        // Return the newly created student
         return ResponseEntity.status(HttpStatus.CREATED).body(student);
     }
+
+
+
 
     // UC_S2: Obtain an individual Student object with a given Student_Id.
     @GetMapping(value = "/students/{studentId}", produces = "application/json")
@@ -94,4 +142,21 @@ public class SchoolController {
         students.removeIf(student -> student.getStudentId() == studentId);
         return ResponseEntity.noContent().build();
     }
+
+
+
+
+    // Utility method to validate email format
+    private boolean isValidEmail(String email) {
+        // Implement your email validation logic here
+        // For simplicity, we'll just check if it contains '@'
+        return email != null && email.contains("@");
+    }
+
+    // Utility method to validate date of birth
+    private boolean isValidDateOfBirth(LocalDate dateOfBirth) {
+        // Check if the date of birth is not null and is in the past
+        return dateOfBirth != null && dateOfBirth.isBefore(LocalDate.now());
+    }
+
 }
