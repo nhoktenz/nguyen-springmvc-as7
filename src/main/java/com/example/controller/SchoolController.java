@@ -5,6 +5,8 @@ import com.example.model.Course;
 import com.example.model.Registrar;
 import com.example.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
@@ -52,7 +54,7 @@ public class SchoolController {
         courses.add(new Course(102, "Science"));
     }
 
-    @GetMapping(value = "/", produces = "application/json")
+    @GetMapping(value = "/", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity index() {
 
         System.out.println("+++++++++++++++++++ BucketListController GET ++++++++++++++++");
@@ -63,7 +65,7 @@ public class SchoolController {
 
 
     // UC_S1: Instantiate Student object and populate it with data.
-  @PostMapping(value = "/students", produces = "application/json")
+    @PostMapping(value = "/students", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<?> createStudent(@RequestBody Student student, BindingResult bindingResult) {
         // Manual validation
         if (bindingResult.hasErrors()) {
@@ -107,7 +109,7 @@ public class SchoolController {
 
 
     // UC_S2: Obtain an individual Student object with a given Student_Id.
-    @GetMapping(value = "/students/{studentId}", produces = "application/json")
+    @GetMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<Student> getStudentById(@PathVariable int studentId) {
         Student student = students.stream()
                 .filter(s -> s.getStudentId() == studentId)
@@ -118,13 +120,13 @@ public class SchoolController {
                 ResponseEntity.notFound().build();
     }
     // UC_S3: Obtain a list of all students. Each student should be listed with all attributes.
-    @GetMapping(value = "/students", produces = "application/json")
+    @GetMapping(value = "/students", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<List<Student>> getAllStudents() {
         return ResponseEntity.ok(students);
     }
 
     // UC_S4: Update Student object with a given Student_Id.
-    @PutMapping(value = "/students/{studentId}", produces = "application/json")
+    @PutMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<Student> updateStudent(@RequestBody Student updatedStudent, @PathVariable Integer studentId) {
         for (int i = 0; i < students.size(); i++) {
             Student student = students.get(i);
@@ -137,7 +139,7 @@ public class SchoolController {
     }
 
     // UC_S5: Delete Student object with a given Student_Id.
-    @DeleteMapping(value = "/students/{studentId}", produces = "application/json")
+    @DeleteMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<Void> deleteStudent(@PathVariable int studentId) {
         students.removeIf(student -> student.getStudentId() == studentId);
         return ResponseEntity.noContent().build();
