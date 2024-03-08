@@ -50,10 +50,13 @@ public class SchoolController {
         // Populate students
         students.add(new Student(studentCounter.incrementAndGet(), "John", "Doe", LocalDate.of(1995, 10, 15), "john@example.com"));
         students.add(new Student(studentCounter.incrementAndGet(), "Jane", "Smith", LocalDate.of(1996, 8, 25), "jane@example.com"));
+        students.add(new Student(studentCounter.incrementAndGet(), "Tom", "Evan", LocalDate.of(1997, 9, 25), "jom@example.com"));
 
         // Populate courses
         courses.add(new Course(101, "Mathematics"));
         courses.add(new Course(102, "Science"));
+
+
     }
 
     @GetMapping(value = "/", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
@@ -244,7 +247,123 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
             
             //return ResponseEntity.notFound().build();
        }
+    }
+
+//UC_R1: Register a given student to a given course
+ @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar registrar) {
+    int courseNumber = registrar.getCourseNumber();
+    List<Integer> studentIds = registrar.getStudentIds();
+
+    // Find the course
+    Course course = findCourseByNumber(courseNumber);
+    if (course == null) {
+        return ResponseEntity.notFound().build(); // Course not found
+    }
+
+    // Check if the studentIds list is not empty
+    if (studentIds == null || studentIds.isEmpty()) {
+        return ResponseEntity.badRequest().body("No students provided for registration.");
+    }
+
+    // Get existing student IDs registered for the course
+    List<Integer> existingStudentIds = getStudentIdsForCourse(courseNumber);
+    int totalRegisteredStudents = existingStudentIds.size();
+
+    // Register each student for the course
+    List<Integer> successfullyRegisteredStudents = new ArrayList<>();
+    List<Integer> alreadyRegisteredStudents = new ArrayList<>();
+    for (int studentId : studentIds) {
+        // Find the student
+        Student student = findStudentById(studentId);
+        if (student == null) {
+            // If a student is not found, add their ID to the list of students that could not be registered
+            alreadyRegisteredStudents.add(studentId);
+        } else {
+            // Check if the student is already registered for this course
+            if (isStudentRegisteredForCourse(studentId, courseNumber)) {
+                // If the student is already registered, add their ID to the list of already registered students
+                alreadyRegisteredStudents.add(studentId);
+            } else {
+                // Check if the course has reached its maximum capacity
+                if (totalRegisteredStudents >= 15) {
+                    // If the course has reached maximum capacity, break the loop
+                    break;
+                }
+
+                // Register the student for the course
+                addStudentToCourse(studentId, courseNumber);
+                successfullyRegisteredStudents.add(studentId);
+                totalRegisteredStudents++;
+            }
         }
+    }
+
+    // Build the response
+    StringBuilder responseMessage = new StringBuilder();
+    if (!successfullyRegisteredStudents.isEmpty()) {
+        responseMessage.append("Successfully registered students: ").append(successfullyRegisteredStudents).append(". ");
+    }
+    if (!alreadyRegisteredStudents.isEmpty()) {
+        responseMessage.append("Students already registered: ").append(alreadyRegisteredStudents).append(". ");
+    }
+    if (totalRegisteredStudents >= 15) {
+        responseMessage.append("Course has reached maximum capacity.");
+    }
+
+    if (totalRegisteredStudents < 15) {
+        // All students were successfully registered or some slots are still available
+        return ResponseEntity.ok().body(responseMessage.toString());
+    } else {
+        // Course has reached maximum capacity
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseMessage.toString());
+    }
+}
+
+
+
+@PostMapping("/registrars")
+    public ResponseEntity<?> registerStudentToCourse(@RequestBody Registrar registrar) {
+        registrars.add(registrar);
+        return ResponseEntity.ok(registrars);
+    }
+
+
+// UC_R2: Obtain list of all students registered to a given course.
+@GetMapping(value = "/courses/{courseNumber}/students", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+public ResponseEntity<?> getStudentsRegisteredToCourse(@PathVariable int courseNumber) {
+    // Get the list of student IDs registered for the course
+    List<Integer> studentIds = getStudentIdsForCourse(courseNumber);
+
+    // Retrieve the student objects based on the student IDs
+    List<Student> students = new ArrayList<>();
+    for (int studentId : studentIds) {
+        Student student = findStudentById(studentId);
+        if (student != null) {
+            students.add(student);
+        }
+    }
+
+    return ResponseEntity.ok(students);
+}
+
+
+// UC_R3: Drop a given student from a given course.
+@DeleteMapping(value = "/drop", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+public ResponseEntity<?> dropStudentFromCourse(@RequestParam int studentId, @RequestParam int courseNumber) {
+    // Get the list of student IDs registered for the course
+    List<Integer> studentIds = getStudentIdsForCourse(courseNumber);
+
+    // Check if the student is registered for this course
+    if (studentIds.contains(studentId)) {
+        // Remove the student from the list of registered students
+        studentIds.remove(Integer.valueOf(studentId));
+        return ResponseEntity.ok().body("Student dropped from course successfully.");
+    } else {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Student is not registered for this course.");
+    }
+}
+
 
     // Utility method to validate email format
     private boolean isValidEmail(String email) {
@@ -263,5 +382,65 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
     private boolean isCourseNumberUnique(int courseNumber) {
         return courses.stream().noneMatch(course -> course.getCourseNumber() == courseNumber);
     }
+
+    // Utility method to get the list of student IDs registered for a course
+private List<Integer> getStudentIdsForCourse(int courseId) {
+    for (Registrar registrar : registrars) {
+        if (registrar.getCourseNumber() == courseId) {
+            return registrar.getStudentIds();
+        }
+    }
+    return new ArrayList<>(); // Return an empty list if no registrations found
+}
+
+
+private Course findCourseByNumber(int courseId) {
+    for (Course course : courses) {
+        if (course.getCourseNumber() == courseId) {
+            return course;
+        }
+    }
+    return null;
+}
+
+private Student findStudentById(int studentId) {
+    for (Student student : students) {
+        if (student.getStudentId() == studentId) {
+            return student;
+        }
+    }
+    return null;
+}
+
+
+private boolean isStudentRegisteredForCourse(int studentId, int courseNumber) {
+    // Find the registrar for the given course
+    for (Registrar registrar : registrars) {
+        if (registrar.getCourseNumber() == courseNumber) {
+            // Check if the student ID is in the list of registered student IDs
+            return registrar.getStudentIds().contains(studentId);
+        }
+    }
+    return false; // Student is not registered for the course
+}
+
+private void addStudentToCourse(int studentId, int courseNumber) {
+    // Find the registrar for the given course
+    for (Registrar registrar : registrars) {
+        if (registrar.getCourseNumber() == courseNumber) {
+            // Add the student ID to the list of registered student IDs
+            registrar.getStudentIds().add(studentId);
+            return;
+        }
+    }
+
+    // If the course registrar doesn't exist, create a new one
+    List<Integer> studentIds = new ArrayList<>();
+    studentIds.add(studentId);
+    registrars.add(new Registrar(courseNumber, studentIds));
+}
+
+
+
 
 }
