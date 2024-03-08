@@ -4,6 +4,8 @@ import com.example.model.Student;
 import com.example.model.Course;
 import com.example.model.Registrar;
 import com.example.model.ErrorResponse;
+import com.example.model.ErrResponse;
+import com.example.model.SuccessResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
@@ -107,18 +109,22 @@ public class SchoolController {
 
 
 
-
-    // UC_S2: Obtain an individual Student object with a given Student_Id.
-    @GetMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity<Student> getStudentById(@PathVariable int studentId) {
-        Student student = students.stream()
-                .filter(s -> s.getStudentId() == studentId)
-                .findFirst()
-                .orElse(null);
-        return student != null ?
-                ResponseEntity.ok(student) :
-                ResponseEntity.notFound().build();
+// UC_S2: Obtain an individual Student object with a given Student_Id.
+@GetMapping(value = "/students/{studentId}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
+    Student student = students.stream()
+            .filter(s -> s.getStudentId() == studentId)
+            .findFirst()
+            .orElse(null);
+    if (student != null) {
+        return ResponseEntity.ok(student);
+    } else {
+        ErrResponse errResp = new ErrResponse("Student with ID " + studentId + " cannot be found");
+        return ResponseEntity.badRequest().body(errResp);
     }
+}
+
+
     // UC_S3: Obtain a list of all students. Each student should be listed with all attributes.
     @GetMapping(value = "/students", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<List<Student>> getAllStudents() {
@@ -127,7 +133,7 @@ public class SchoolController {
 
     // UC_S4: Update Student object with a given Student_Id.
     @PutMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity<Student> updateStudent(@RequestBody Student updatedStudent, @PathVariable Integer studentId) {
+    public ResponseEntity<?> updateStudent(@RequestBody Student updatedStudent, @PathVariable Integer studentId) {
         for (int i = 0; i < students.size(); i++) {
             Student student = students.get(i);
             if (student.getStudentId() == studentId) {
@@ -135,18 +141,110 @@ public class SchoolController {
                 return ResponseEntity.ok(updatedStudent);
             }
         }
-        return ResponseEntity.notFound().build();
+        //return ResponseEntity.notFound().build();
+        ErrResponse errResp = new ErrResponse("Student with ID " + studentId + " cannot be found");
+        return ResponseEntity.badRequest().body(errResp);
     }
 
     // UC_S5: Delete Student object with a given Student_Id.
-    @DeleteMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity<Void> deleteStudent(@PathVariable int studentId) {
-        students.removeIf(student -> student.getStudentId() == studentId);
-        return ResponseEntity.noContent().build();
+    @DeleteMapping(value = "/students/{studentId}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<?> deleteStudent(@PathVariable int studentId) {
+        boolean removed = students.removeIf(student -> student.getStudentId() == studentId);
+        if (removed) {
+            SuccessResponse successMessage = new SuccessResponse("Student with ID " + studentId + " deleted successfully");
+            return ResponseEntity.ok(successMessage);
+        } else {
+            //return ResponseEntity.notFound().build();
+            ErrResponse errResp = new ErrResponse("Student with ID " + studentId + " cannot be found");
+            return ResponseEntity.badRequest().body(errResp);
+        }
     }
 
 
 
+    @PostMapping(value = "/courses", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<?> createCourse(@RequestBody Course course) {
+        // Check if the courseNumber is already in use
+        if (isCourseNumberUnique(course.getCourseNumber())) {
+             courses.add(course);
+            return ResponseEntity.status(HttpStatus.CREATED).body(course);
+        } else {
+            // If the courseNumber is not unique, return a conflict response
+            //return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            ErrResponse errResp = new ErrResponse("Course " + course.getCourseNumber() + " already existed.");
+            return ResponseEntity.badRequest().body(errResp);
+            
+        }
+    }
+
+
+    @GetMapping(value = "/courses/{courseNumber}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<?> getCourse(@PathVariable int courseNumber) {
+        // Find the course with the specified course number
+        Course course = null;
+        for (Course c : courses) {
+            if (c.getCourseNumber() == courseNumber) {
+                course = c;
+                break;
+            }
+        }
+
+        // If the course is found, return it; otherwise, return not found
+        if (course != null) {
+            return ResponseEntity.ok(course);
+        } else {
+            ErrResponse errResp = new ErrResponse("Course " + courseNumber + " cannot be found");
+            return ResponseEntity.badRequest().body(errResp);
+            //return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping(value = "/courses", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+        public ResponseEntity<List<Course>> getAllCourses() {
+            return ResponseEntity.ok(courses);
+        }
+
+
+    @PutMapping(value = "/courses/{courseNumber}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<?> updateCourse(@PathVariable int courseNumber, @RequestBody Course updatedCourse) {
+        // Find the course in the list
+        Course existingCourse = null;
+        for (Course course : courses) {
+            if (course.getCourseNumber() == courseNumber) {
+                existingCourse = course;
+                break;
+            }
+        }
+
+        // If the course does not exist, return not found
+        if (existingCourse == null) {
+            ErrResponse errResp = new ErrResponse("Course " + courseNumber + " cannot be found");
+            return ResponseEntity.badRequest().body(errResp);
+            
+            //return ResponseEntity.notFound().build();
+        }
+
+        // Update the existing course with the values from updatedCourse
+        existingCourse.setCourseTitle(updatedCourse.getCourseTitle());
+
+        // Return the updated course
+        return ResponseEntity.ok(existingCourse);
+    }
+
+    @DeleteMapping(value = "/courses/{courseNumber}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<?> deleteCourse(@PathVariable int courseNumber) {
+        int initialSize = courses.size();
+        courses.removeIf(course -> course.getCourseNumber() == courseNumber);
+        if (courses.size() < initialSize) {
+            SuccessResponse successMessage = new SuccessResponse("Course with number " + courseNumber + " deleted successfully");
+            return ResponseEntity.ok(successMessage);
+        } else {
+            ErrResponse errResp = new ErrResponse("Course " + courseNumber + " cannot be found");
+            return ResponseEntity.badRequest().body(errResp);
+            
+            //return ResponseEntity.notFound().build();
+       }
+        }
 
     // Utility method to validate email format
     private boolean isValidEmail(String email) {
@@ -159,6 +257,11 @@ public class SchoolController {
     private boolean isValidDateOfBirth(LocalDate dateOfBirth) {
         // Check if the date of birth is not null and is in the past
         return dateOfBirth != null && dateOfBirth.isBefore(LocalDate.now());
+    }
+
+    // Utility method to check if the courseNumber is unique
+    private boolean isCourseNumberUnique(int courseNumber) {
+        return courses.stream().noneMatch(course -> course.getCourseNumber() == courseNumber);
     }
 
 }
