@@ -30,6 +30,8 @@ import java.util.HashMap;
 
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,12 +47,17 @@ public class SchoolController {
     private final AtomicInteger studentCounter = new AtomicInteger();
     private final AtomicLong courseCounter = new AtomicLong();
     private final AtomicLong registrarCounter = new AtomicLong();
+    private static final int MAX_CAPACITY = 15;
+
 
     public SchoolController(){
         // Populate students
-        students.add(new Student(studentCounter.incrementAndGet(), "John", "Doe", LocalDate.of(1995, 10, 15), "john@example.com"));
-        students.add(new Student(studentCounter.incrementAndGet(), "Jane", "Smith", LocalDate.of(1996, 8, 25), "jane@example.com"));
-        students.add(new Student(studentCounter.incrementAndGet(), "Tom", "Evan", LocalDate.of(1997, 9, 25), "jom@example.com"));
+        // students.add(new Student(studentCounter.incrementAndGet(), "John", "Doe", LocalDate.of(1995, 10, 15), "john@example.com"));
+        // students.add(new Student(studentCounter.incrementAndGet(), "Jane", "Smith", LocalDate.of(1996, 8, 25), "jane@example.com"));
+        // students.add(new Student(studentCounter.incrementAndGet(), "Tom", "Evan", LocalDate.of(1997, 9, 25), "jom@example.com"));
+        students.add(new Student(studentCounter.incrementAndGet(), "John", "Doe", "1995-10-15", "john@example.com"));
+        students.add(new Student(studentCounter.incrementAndGet(), "Jane", "Smith", "1996-08-25", "jane@example.com"));
+        students.add(new Student(studentCounter.incrementAndGet(), "Tom", "Evan", "1997-09-25", "jom@example.com"));
 
         // Populate courses
         courses.add(new Course(101, "Mathematics"));
@@ -60,12 +67,11 @@ public class SchoolController {
     }
 
     @GetMapping(value = "/", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity index() {
-
-        System.out.println("+++++++++++++++++++ BucketListController GET ++++++++++++++++");
-
-
-        return ResponseEntity.ok(students);
+    public ResponseEntity<?> index() {
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("students", students);
+        responseData.put("courses", courses);
+        return ResponseEntity.ok(responseData);
     }
 
 
@@ -96,7 +102,7 @@ public class SchoolController {
 
         // Perform additional validation for date of birth
         if (!isValidDateOfBirth(student.getDateOfBirth())) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Date of birth must be in the past.")));
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Invalid date of birth format. Please provide the date in YYYY-MM-DD format. Date of birth must be in the past.")));
         }
 
         // Increment the student ID and set it to the new student
@@ -136,18 +142,55 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
 
     // UC_S4: Update Student object with a given Student_Id.
     @PutMapping(value = "/students/{studentId}",  produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public ResponseEntity<?> updateStudent(@RequestBody Student updatedStudent, @PathVariable Integer studentId) {
+    public ResponseEntity<?> updateStudent(@RequestBody @Valid Student updatedStudent, @PathVariable Integer studentId, BindingResult bindingResult) {
+        // Check for validation errors
+        if (bindingResult.hasErrors()) {
+            List<String> errors = new ArrayList<>();
+            for (FieldError error : bindingResult.getFieldErrors()) {
+                errors.add(error.getDefaultMessage());
+            }
+            return ResponseEntity.badRequest().body(new ErrorResponse(errors));
+        }
+
+        // Check for required fields
+        if (updatedStudent.getFirstName() == null || updatedStudent.getLastName() == null ||
+                updatedStudent.getDateOfBirth() == null || updatedStudent.getEmail() == null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("First name, last name, date of birth, and email are required fields.")));
+        }
+
+        // Perform additional validation for email format
+        if (!isValidEmail(updatedStudent.getEmail())) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Invalid email format.")));
+        }
+
+        // Perform additional validation for date of birth
+        if (!isValidDateOfBirth(updatedStudent.getDateOfBirth())) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Invalid date of birth format. Please provide the date in YYYY-MM-DD format. Date of birth must be in the past.")));
+        }
+
+
+
+        // Update the student
         for (int i = 0; i < students.size(); i++) {
             Student student = students.get(i);
             if (student.getStudentId() == studentId) {
-                students.set(i, updatedStudent);
+                // Set the studentId of the updatedStudent
+                updatedStudent.setStudentId(studentId);
+                // Update the fields of the existing student object
+                student.setFirstName(updatedStudent.getFirstName());
+                student.setLastName(updatedStudent.getLastName());
+                student.setDateOfBirth(updatedStudent.getDateOfBirth());
+                student.setEmail(updatedStudent.getEmail());
+                // Return the updated student
                 return ResponseEntity.ok(updatedStudent);
             }
         }
-        //return ResponseEntity.notFound().build();
+        // Return an error response if the student with the given ID is not found
         ErrResponse errResp = new ErrResponse("Student with ID " + studentId + " cannot be found");
         return ResponseEntity.badRequest().body(errResp);
     }
+
+
 
     // UC_S5: Delete Student object with a given Student_Id.
     @DeleteMapping(value = "/students/{studentId}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
@@ -164,23 +207,28 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
     }
 
 
-
-    @PostMapping(value = "/courses", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    //UC_C1: Instantiate Course object and populate it with data.
+   @PostMapping(value = "/courses", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<?> createCourse(@RequestBody Course course) {
+        // Check for required fields
+        if (course.getCourseNumber() == 0 || course.getCourseTitle() == null) {
+            // If any required field is null, return a bad request response
+            return ResponseEntity.badRequest().body(new ErrorResponse(Collections.singletonList("Course Number and Course Title are required fields.")));
+        }
+
         // Check if the courseNumber is already in use
         if (isCourseNumberUnique(course.getCourseNumber())) {
-             courses.add(course);
+            courses.add(course);
             return ResponseEntity.status(HttpStatus.CREATED).body(course);
         } else {
             // If the courseNumber is not unique, return a conflict response
-            //return ResponseEntity.status(HttpStatus.CONFLICT).build();
             ErrResponse errResp = new ErrResponse("Course " + course.getCourseNumber() + " already existed.");
             return ResponseEntity.badRequest().body(errResp);
-            
         }
     }
 
 
+    //UC_C2: Obtain an individual Course object with given Course_Number.
     @GetMapping(value = "/courses/{courseNumber}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<?> getCourse(@PathVariable int courseNumber) {
         // Find the course with the specified course number
@@ -202,12 +250,13 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
         }
     }
 
+    //UC_C3: Obtain a list of all courses. Each course should be listed with all attributes
     @GetMapping(value = "/courses", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
         public ResponseEntity<List<Course>> getAllCourses() {
             return ResponseEntity.ok(courses);
         }
 
-
+    //UC_C4: Update Course object with a given Course_Number
     @PutMapping(value = "/courses/{courseNumber}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<?> updateCourse(@PathVariable int courseNumber, @RequestBody Course updatedCourse) {
         // Find the course in the list
@@ -234,6 +283,7 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
         return ResponseEntity.ok(existingCourse);
     }
 
+    //UC_C5: Delete Course object with a given Course_Number.
     @DeleteMapping(value = "/courses/{courseNumber}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
     public ResponseEntity<?> deleteCourse(@PathVariable int courseNumber) {
         int initialSize = courses.size();
@@ -250,7 +300,7 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
     }
 
 //UC_R1: Register a given student to a given course
- @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+@PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
 public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar registrar) {
     int courseNumber = registrar.getCourseNumber();
     List<Integer> studentIds = registrar.getStudentIds();
@@ -307,11 +357,11 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
     if (!alreadyRegisteredStudents.isEmpty()) {
         responseMessage.append("Students already registered: ").append(alreadyRegisteredStudents).append(". ");
     }
-    if (totalRegisteredStudents >= 15) {
+    if (totalRegisteredStudents >= MAX_CAPACITY) {
         responseMessage.append("Course has reached maximum capacity.");
     }
 
-    if (totalRegisteredStudents < 15) {
+    if (totalRegisteredStudents < MAX_CAPACITY) {
         // All students were successfully registered or some slots are still available
         return ResponseEntity.ok().body(responseMessage.toString());
     } else {
@@ -321,12 +371,47 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
 }
 
 
+// Additional register method to register a student to a course using URL parameters
+@PostMapping("/reg")
+public ResponseEntity<?> registerStudentToCourseByParams(@RequestParam int courseNumber, @RequestParam int studentId) {
+    // Find the course
+    Course course = findCourseByNumber(courseNumber);
+    if (course == null) {
+        return ResponseEntity.notFound().build(); // Course not found
+    }
 
-@PostMapping("/registrars")
-    public ResponseEntity<?> registerStudentToCourse(@RequestBody Registrar registrar) {
-        registrars.add(registrar);
+    // Find the student
+    Student student = findStudentById(studentId);
+    if (student == null) {
+        return ResponseEntity.notFound().build(); // Student not found
+    }
+
+    // Check if the student is already registered for this course
+    if (isStudentRegisteredForCourse(studentId, courseNumber)) {
+        ErrResponse errResp = new ErrResponse("Student " + studentId + " is already registered for this course. " + courseNumber );
+        return ResponseEntity.badRequest().body(errResp);
+    }
+
+    // Check if the course has reached its maximum capacity
+    List<Integer> existingStudentIds = getStudentIdsForCourse(courseNumber);
+    if (existingStudentIds.size() >= MAX_CAPACITY) {
+        ErrResponse errResp = new ErrResponse("Course has reached maximum capacity.");
+        return ResponseEntity.badRequest().body(errResp);
+    }
+
+    // Register the student for the course
+    addStudentToCourse(studentId, courseNumber);
+    SuccessResponse successMessage = new SuccessResponse("Student with ID " + studentId + "successfully registered for the course" + courseNumber);
+    return ResponseEntity.ok(successMessage);
+}
+
+
+
+@GetMapping("/registrars")
+   public ResponseEntity<List<Registrar>> getAllRegistrars() {
         return ResponseEntity.ok(registrars);
     }
+
 
 
 // UC_R2: Obtain list of all students registered to a given course.
@@ -358,25 +443,47 @@ public ResponseEntity<?> dropStudentFromCourse(@RequestParam int studentId, @Req
     if (studentIds.contains(studentId)) {
         // Remove the student from the list of registered students
         studentIds.remove(Integer.valueOf(studentId));
-        return ResponseEntity.ok().body("Student dropped from course successfully.");
+
+        SuccessResponse successMessage = new SuccessResponse("Student with ID = " + studentId + " dropped from course" + courseNumber + " successfully");
+        return ResponseEntity.ok(successMessage);
     } else {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Student is not registered for this course.");
+        ErrResponse errResp = new ErrResponse("Student with ID = " + studentId + " cannot be found registered for course " + courseNumber );
+        return ResponseEntity.badRequest().body(errResp);
+       
     }
 }
 
 
     // Utility method to validate email format
     private boolean isValidEmail(String email) {
-        // Implement your email validation logic here
-        // For simplicity, we'll just check if it contains '@'
-        return email != null && email.contains("@");
+        // Check if email is not null, contains "@" and ".", and "@" appears before "."
+        return email != null && email.contains("@") && email.contains(".") && email.indexOf("@") < email.lastIndexOf(".");
     }
 
+
     // Utility method to validate date of birth
-    private boolean isValidDateOfBirth(LocalDate dateOfBirth) {
-        // Check if the date of birth is not null and is in the past
-        return dateOfBirth != null && dateOfBirth.isBefore(LocalDate.now());
+    private boolean isValidDateOfBirth(String dateOfBirth) {
+
+        // Define the regular expression pattern for date in "yyyy-MM-dd" format
+        String datePattern = "\\d{4}-\\d{2}-\\d{2}";
+
+        // Check if the date of birth matches the format
+        if (!dateOfBirth.matches(datePattern)) {
+            return false;
+        }
+
+        // Parse the date of birth string to a LocalDate object
+        try {
+            LocalDate parsedDate = LocalDate.parse(dateOfBirth);
+            // Check if the parsed date is in the past
+            return parsedDate.isBefore(LocalDate.now());
+        } catch (DateTimeParseException e) {
+            // Handle parsing exception (e.g., if the date is invalid)
+            return false;
+        }
     }
+
+
 
     // Utility method to check if the courseNumber is unique
     private boolean isCourseNumberUnique(int courseNumber) {
@@ -439,8 +546,5 @@ private void addStudentToCourse(int studentId, int courseNumber) {
     studentIds.add(studentId);
     registrars.add(new Registrar(courseNumber, studentIds));
 }
-
-
-
 
 }

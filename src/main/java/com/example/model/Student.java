@@ -15,7 +15,7 @@ public class Student {
 
     @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
-    private LocalDate dateOfBirth;
+    private String dateOfBirth;
 
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
@@ -26,7 +26,7 @@ public class Student {
     public Student() {
     }
 
-    public Student(int studentId, String firstName, String lastName, LocalDate dateOfBirth, String email) {
+    public Student(int studentId, String firstName, String lastName, String dateOfBirth, String email) {
         this.studentId = studentId;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -59,11 +59,11 @@ public class Student {
         this.lastName = lastName;
     }
 
-    public LocalDate getDateOfBirth() {
+    public String getDateOfBirth() {
         return dateOfBirth;
     }
 
-    public void setDateOfBirth(LocalDate dateOfBirth) {
+    public void setDateOfBirth(String dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
 
