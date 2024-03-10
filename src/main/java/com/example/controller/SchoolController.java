@@ -6,6 +6,7 @@ import com.example.model.Registrar;
 import com.example.model.ErrorResponse;
 import com.example.model.ErrResponse;
 import com.example.model.SuccessResponse;
+import com.example.model.RegistrationResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
@@ -300,7 +301,83 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
     }
 
 //UC_R1: Register a given student to a given course
-@PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+// @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+// public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar registrar) {
+//     int courseNumber = registrar.getCourseNumber();
+//     List<Integer> studentIds = registrar.getStudentIds();
+
+//     // Find the course
+//     Course course = findCourseByNumber(courseNumber);
+//     if (course == null) {
+//         return ResponseEntity.notFound().build(); // Course not found
+//     }
+
+//     // Check if the studentIds list is not empty
+//     if (studentIds == null || studentIds.isEmpty()) {
+//         return ResponseEntity.badRequest().body("No students provided for registration.");
+//     }
+
+//     // Get existing student IDs registered for the course
+//     List<Integer> existingStudentIds = getStudentIdsForCourse(courseNumber);
+//     int totalRegisteredStudents = existingStudentIds.size();
+//     System.out.println("existingStudentIds " + existingStudentIds);
+//     System.out.println("totalRegisteredStudents " + totalRegisteredStudents);
+
+//     // Register each student for the course
+//     List<Integer> successfullyRegisteredStudents = new ArrayList<>();
+//     List<Integer> alreadyRegisteredStudents = new ArrayList<>();
+//     List<Integer> nonExistingStudents = new ArrayList<>();
+//     for (int studentId : studentIds) {
+//         // Check if the student exists
+//         Student student = findStudentById(studentId);
+//         if (student == null) {
+//             // If the student does not exist, add their ID to the list of non-existing students
+//             nonExistingStudents.add(studentId);
+//         } else {
+//             // Check if the student is already registered for this course
+//             if (isStudentRegisteredForCourse(studentId, courseNumber)) {
+//                 // If the student is already registered, add their ID to the list of already registered students
+//                 alreadyRegisteredStudents.add(studentId);
+//             } else {
+//                 // Check if the course has reached its maximum capacity
+//                 if (totalRegisteredStudents >= 15) {
+//                     // If the course has reached maximum capacity, break the loop
+//                     break;
+//                 }
+
+//                 // Register the student for the course
+//                 addStudentToCourse(studentId, courseNumber);
+//                 successfullyRegisteredStudents.add(studentId);
+//                 totalRegisteredStudents++;
+//             }
+//         }
+//     }
+
+//     // Build the response
+//     StringBuilder responseMessage = new StringBuilder();
+//     if (!successfullyRegisteredStudents.isEmpty()) {
+//         responseMessage.append("Successfully registered students: ").append(successfullyRegisteredStudents).append(". ");
+//     }
+//     if (!alreadyRegisteredStudents.isEmpty()) {
+//         responseMessage.append("Students already registered: ").append(alreadyRegisteredStudents).append(". ");
+//     }
+//     if (!nonExistingStudents.isEmpty()) {
+//         responseMessage.append("Students not found: ").append(nonExistingStudents).append(". ");
+//     }
+//     if (totalRegisteredStudents >= MAX_CAPACITY) {
+//         responseMessage.append("Course has reached maximum capacity.");
+//     }
+
+//     if (totalRegisteredStudents < MAX_CAPACITY) {
+//         // All students were successfully registered or some slots are still available
+//         return ResponseEntity.ok().body(responseMessage.toString());
+//     } else {
+//         // Course has reached maximum capacity
+//         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseMessage.toString());
+//     }
+// }
+
+    @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
 public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar registrar) {
     int courseNumber = registrar.getCourseNumber();
     List<Integer> studentIds = registrar.getStudentIds();
@@ -313,7 +390,9 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
 
     // Check if the studentIds list is not empty
     if (studentIds == null || studentIds.isEmpty()) {
-        return ResponseEntity.badRequest().body("No students provided for registration.");
+        ErrResponse errResp = new ErrResponse("No students provided for registration.");
+        return ResponseEntity.badRequest().body(errResp);
+            
     }
 
     // Get existing student IDs registered for the course
@@ -323,12 +402,13 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
     // Register each student for the course
     List<Integer> successfullyRegisteredStudents = new ArrayList<>();
     List<Integer> alreadyRegisteredStudents = new ArrayList<>();
+    List<Integer> nonExistingStudents = new ArrayList<>();
     for (int studentId : studentIds) {
-        // Find the student
+        // Check if the student exists
         Student student = findStudentById(studentId);
         if (student == null) {
-            // If a student is not found, add their ID to the list of students that could not be registered
-            alreadyRegisteredStudents.add(studentId);
+            // If the student does not exist, add their ID to the list of non-existing students
+            nonExistingStudents.add(studentId);
         } else {
             // Check if the student is already registered for this course
             if (isStudentRegisteredForCourse(studentId, courseNumber)) {
@@ -336,8 +416,11 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
                 alreadyRegisteredStudents.add(studentId);
             } else {
                 // Check if the course has reached its maximum capacity
-                if (totalRegisteredStudents >= 15) {
+                if (totalRegisteredStudents >= MAX_CAPACITY) {
                     // If the course has reached maximum capacity, break the loop
+                    // ErrResponse errResp = new ErrResponse("Course has reach maximum capacity of 15 students.");
+                    // return ResponseEntity.badRequest().body(errResp);
+            
                     break;
                 }
 
@@ -349,26 +432,18 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
         }
     }
 
-    // Build the response
-    StringBuilder responseMessage = new StringBuilder();
-    if (!successfullyRegisteredStudents.isEmpty()) {
-        responseMessage.append("Successfully registered students: ").append(successfullyRegisteredStudents).append(". ");
-    }
-    if (!alreadyRegisteredStudents.isEmpty()) {
-        responseMessage.append("Students already registered: ").append(alreadyRegisteredStudents).append(". ");
-    }
-    if (totalRegisteredStudents >= MAX_CAPACITY) {
-        responseMessage.append("Course has reached maximum capacity.");
-    }
+    // Create RegistrationResponse object
+    RegistrationResponse response = new RegistrationResponse();
+    response.setSuccessfullyRegisteredStudents(successfullyRegisteredStudents);
+    response.setAlreadyRegisteredStudents(alreadyRegisteredStudents);
+    response.setNonExistingStudents(nonExistingStudents);
+    response.setTotalRegisteredStudents(totalRegisteredStudents);
+    response.setCourseFull(totalRegisteredStudents >= MAX_CAPACITY);
 
-    if (totalRegisteredStudents < MAX_CAPACITY) {
-        // All students were successfully registered or some slots are still available
-        return ResponseEntity.ok().body(responseMessage.toString());
-    } else {
-        // Course has reached maximum capacity
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseMessage.toString());
-    }
+    return ResponseEntity.ok().body(response);
 }
+
+
 
 
 // Additional register method to register a student to a course using URL parameters
@@ -410,7 +485,7 @@ public ResponseEntity<?> registerStudentToCourseByParams(@RequestParam int cours
 @GetMapping("/registrars")
    public ResponseEntity<List<Registrar>> getAllRegistrars() {
         return ResponseEntity.ok(registrars);
-    }
+}
 
 
 
