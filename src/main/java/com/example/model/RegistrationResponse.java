@@ -7,7 +7,7 @@ public class RegistrationResponse {
     private List<Integer> alreadyRegisteredStudents;
     private List<Integer> nonExistingStudents;
     private int totalRegisteredStudents;
-    private boolean isCourseFull;
+    //private boolean isCourseFull;
 
     // Constructors
     public RegistrationResponse() {
@@ -18,7 +18,7 @@ public class RegistrationResponse {
         this.alreadyRegisteredStudents = alreadyRegisteredStudents;
         this.nonExistingStudents = nonExistingStudents;
         this.totalRegisteredStudents = totalRegisteredStudents;
-        this.isCourseFull = isCourseFull;
+        //this.isCourseFull = isCourseFull;
     }
 
     // Getters and setters
@@ -54,11 +54,11 @@ public class RegistrationResponse {
         this.totalRegisteredStudents = totalRegisteredStudents;
     }
 
-    public boolean isCourseFull() {
-        return isCourseFull;
-    }
+    // public boolean isCourseFull() {
+    //     return isCourseFull;
+    // }
 
-    public void setCourseFull(boolean courseFull) {
-        isCourseFull = courseFull;
-    }
+    // public void setCourseFull(boolean courseFull) {
+    //     isCourseFull = courseFull;
+    // }
 }

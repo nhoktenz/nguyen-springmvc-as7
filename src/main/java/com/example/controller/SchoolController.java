@@ -377,7 +377,7 @@ public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
 //     }
 // }
 
-    @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+ @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
 public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar registrar) {
     int courseNumber = registrar.getCourseNumber();
     List<Integer> studentIds = registrar.getStudentIds();
@@ -385,19 +385,35 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
     // Find the course
     Course course = findCourseByNumber(courseNumber);
     if (course == null) {
-        return ResponseEntity.notFound().build(); // Course not found
+        ErrResponse errResp = new ErrResponse("Course Number = " + courseNumber +" not found!");
+        return ResponseEntity.badRequest().body(errResp);
+        //return ResponseEntity.notFound().build(); // Course not found
     }
 
     // Check if the studentIds list is not empty
     if (studentIds == null || studentIds.isEmpty()) {
         ErrResponse errResp = new ErrResponse("No students provided for registration.");
         return ResponseEntity.badRequest().body(errResp);
-            
+    }
+
+    // Check if the number of students to be registered exceeds the maximum capacity
+    if (studentIds.size() > MAX_CAPACITY) {
+        // If the number of students to be registered exceeds the maximum capacity, return a bad request response
+        ErrResponse errResp = new ErrResponse("Exceeded maximum capacity of student's id input. Maximum capacity is " + MAX_CAPACITY);
+        return ResponseEntity.badRequest().body(errResp);
     }
 
     // Get existing student IDs registered for the course
     List<Integer> existingStudentIds = getStudentIdsForCourse(courseNumber);
     int totalRegisteredStudents = existingStudentIds.size();
+
+    // Check if the number of students to be registered exceeds the remaining capacity
+    // int remainingCapacity = MAX_CAPACITY - totalRegisteredStudents;
+    // if (studentIds.size() > remainingCapacity) {
+    //     // If the number of students to be registered exceeds the remaining capacity, return a bad request response
+    //     ErrResponse errResp = new ErrResponse("Exceeded remaining capacity. Maximum remaining capacity is " + remainingCapacity);
+    //     return ResponseEntity.badRequest().body(errResp);
+    // }
 
     // Register each student for the course
     List<Integer> successfullyRegisteredStudents = new ArrayList<>();
@@ -415,15 +431,6 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
                 // If the student is already registered, add their ID to the list of already registered students
                 alreadyRegisteredStudents.add(studentId);
             } else {
-                // Check if the course has reached its maximum capacity
-                if (totalRegisteredStudents >= MAX_CAPACITY) {
-                    // If the course has reached maximum capacity, break the loop
-                    // ErrResponse errResp = new ErrResponse("Course has reach maximum capacity of 15 students.");
-                    // return ResponseEntity.badRequest().body(errResp);
-            
-                    break;
-                }
-
                 // Register the student for the course
                 addStudentToCourse(studentId, courseNumber);
                 successfullyRegisteredStudents.add(studentId);
@@ -438,10 +445,12 @@ public ResponseEntity<?> registerStudentsToCourse(@Valid @RequestBody Registrar 
     response.setAlreadyRegisteredStudents(alreadyRegisteredStudents);
     response.setNonExistingStudents(nonExistingStudents);
     response.setTotalRegisteredStudents(totalRegisteredStudents);
-    response.setCourseFull(totalRegisteredStudents >= MAX_CAPACITY);
+    //response.setCourseFull(totalRegisteredStudents >= MAX_CAPACITY);
 
     return ResponseEntity.ok().body(response);
 }
+
+
 
 
 
