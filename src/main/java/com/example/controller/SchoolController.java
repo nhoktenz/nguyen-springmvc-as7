@@ -109,20 +109,20 @@ public class SchoolController {
 
 
 
-// UC_S2: Obtain an individual Student object with a given Student_Id.
-@GetMapping(value = "/students/{studentId}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
-public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
-    Student student = students.stream()
-            .filter(s -> s.getStudentId() == studentId)
-            .findFirst()
-            .orElse(null);
-    if (student != null) {
-        return ResponseEntity.ok(student);
-    } else {
-        ErrResponse errResp = new ErrResponse("Student with ID " + studentId + " cannot be found");
-        return ResponseEntity.badRequest().body(errResp);
+    // UC_S2: Obtain an individual Student object with a given Student_Id.
+    @GetMapping(value = "/students/{studentId}", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<?> getStudentById(@PathVariable int studentId) {
+        Student student = students.stream()
+                .filter(s -> s.getStudentId() == studentId)
+                .findFirst()
+                .orElse(null);
+        if (student != null) {
+            return ResponseEntity.ok(student);
+        } else {
+            ErrResponse errResp = new ErrResponse("Student with ID " + studentId + " cannot be found");
+            return ResponseEntity.badRequest().body(errResp);
+        }
     }
-}
 
 
     // UC_S3: Obtain a list of all students. Each student should be listed with all attributes.
