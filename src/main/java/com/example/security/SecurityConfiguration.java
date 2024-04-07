@@ -7,8 +7,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-//import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+//import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
@@ -20,7 +20,8 @@ import org.springframework.security.web.util.matcher.*;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled=true)
-public class SecurityConfiguration extends WebSecurityConfigurerAdapter{
+//public class SecurityConfiguration extends WebSecurityConfigurerAdapter{
+public class SecurityConfiguration{
 
 
     private static final RequestMatcher PROTECTED_URLS = new OrRequestMatcher(
@@ -39,14 +40,14 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter{
         auth.authenticationProvider(provider);
     }
 
-    @Override
-    public void configure(final WebSecurity webSecurity) {
-        webSecurity.ignoring().antMatchers("/token/**");
-    }
-    // @Bean
-    // public WebSecurityCustomizer webSecurityCustomizer() {
-    //     return (web) -> web.ignoring().antMatchers("/token/**");
+    // @Override
+    // public void configure(final WebSecurity webSecurity) {
+    //     webSecurity.ignoring().antMatchers("/token/**");
     // }
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().antMatchers("/token/**");
+    }
 
     @Override
     public void configure(HttpSecurity http) throws Exception {
