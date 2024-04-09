@@ -1,18 +1,16 @@
 package com.example.userService;
 
-import javax.persistence.*;
-
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
+import javax.persistence.*;
+import org.springframework.security.core.GrantedAuthority;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Collections;
+;
+
 
 @Entity
-@Table(name = "users")
-public class User implements UserDetails{
+@Table(name = "student")
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,21 +22,15 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private String password;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles;
-
-     // Constructors
-     public User() {
+    // Constructors, Getters, and Setters
+    
+    // Constructors
+    public User() {
     }
 
-    public User(String username, String password, Set<Role> roles) {
+    public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.roles = roles;
     }
 
 
@@ -67,22 +59,12 @@ public class User implements UserDetails{
         this.password = password;
     }
 
-    public Set<Role> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
-    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Set<GrantedAuthority> authorities = new HashSet<>();
-        for (Role role : roles) {
-            authorities.add(new SimpleGrantedAuthority(role.getName()));
-        }
-        return authorities;
+        return Collections.emptyList();
     }
+    
 
     @Override
     public boolean isAccountNonExpired() {
@@ -103,5 +85,4 @@ public class User implements UserDetails{
     public boolean isEnabled() {
         return true;
     }
-
 }

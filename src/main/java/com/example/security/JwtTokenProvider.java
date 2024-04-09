@@ -16,9 +16,9 @@ import com.example.userService.*;;
 
 @Component
 public class JwtTokenProvider {
-
-    @Value("${app.jwtSecret}")
+    @Value("${spring.app.jwtSecret}")
     private String jwtSecret;
+
 
     @Value("${app.jwtExpirationInMs}")
     private int jwtExpirationInMs;
