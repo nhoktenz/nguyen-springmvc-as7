@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.web.SecurityFilterChain;
 //import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -35,7 +36,7 @@ public class SecurityConfiguration{
         this.provider=authenticationProvider;
     }
 
-    @Override
+    
     protected void configure(final AuthenticationManagerBuilder auth) {
         auth.authenticationProvider(provider);
     }
@@ -46,11 +47,34 @@ public class SecurityConfiguration{
     // }
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().antMatchers("/token/**");
+        return (web) -> web.ignoring().AntPathRequestMatcher("/token/**");
     }
 
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
+
+    // @Override
+    // public void configure(HttpSecurity http) throws Exception {
+    //     http.sessionManagement()
+    //             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+    //             .and()
+    //             .exceptionHandling()
+    //             .and()
+    //             .authenticationProvider(provider)
+    //             .addFilterBefore(authenticationFilter(), AnonymousAuthenticationFilter.class)
+    //             .authorizeRequests()
+    //             .requestMatchers(PROTECTED_URLS)
+    //             .authenticated()
+    //             .and()
+    //             .csrf().disable()
+    //             .formLogin().disable()
+    //             .httpBasic().disable()
+    //             .logout().disable();
+    // }
+
+    
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+
         http.sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
@@ -66,9 +90,10 @@ public class SecurityConfiguration{
                 .formLogin().disable()
                 .httpBasic().disable()
                 .logout().disable();
+         return http.build();
     }
 
-    @Bean
+    @Override
       AuthenticationFilter authenticationFilter() throws Exception {
         final AuthenticationFilter filter = new AuthenticationFilter(PROTECTED_URLS);
         filter.setAuthenticationManager(authenticationManager());
@@ -81,3 +106,4 @@ public class SecurityConfiguration{
         return new HttpStatusEntryPoint(HttpStatus.FORBIDDEN);
     }
 }
+

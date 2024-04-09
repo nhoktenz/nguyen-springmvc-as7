@@ -120,20 +120,7 @@
 	        <!-- <version>6.1.4</version> -->
 	    </dependency>
 
-	    
-	    <!-- Servlet API -->
-	    <!-- <dependency>
-		    <groupId>javax.servlet</groupId>
-		    <artifactId>javax.servlet-api</artifactId>
-		    <version>4.0.1</version>
-		</dependency> -->
-
-		<!-- <dependency>
-		    <groupId>jakarta.validation</groupId>
-		    <artifactId>jakarta.validation-api</artifactId>
-		    <version>3.0.0</version>
-		</dependency> -->
-
+	   
 		<dependency>
 		    <groupId>javax.validation</groupId>
 		    <artifactId>validation-api</artifactId>
@@ -183,11 +170,11 @@
 
 
 		<dependency>
-    <groupId>org.junit.jupiter</groupId>
-    <artifactId>junit-jupiter-api</artifactId>
-    <version>5.8.0</version> <!-- or the latest version available -->
-    <scope>test</scope>
-</dependency>
+		    <groupId>org.junit.jupiter</groupId>
+		    <artifactId>junit-jupiter-api</artifactId>
+		    <version>5.8.0</version> <!-- or the latest version available -->
+		    <scope>test</scope>
+		</dependency>
 
 
 	</dependencies>

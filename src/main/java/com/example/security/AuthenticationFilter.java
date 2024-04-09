@@ -19,13 +19,11 @@ import java.io.IOException;
 import java.util.Optional;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
+
 public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter {
-
-
     AuthenticationFilter(final RequestMatcher requiresAuth) {
         super(requiresAuth);
     }
-
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         String token = StringUtils.isNotEmpty(request.getHeader(AUTHORIZATION)) ? request.getHeader(AUTHORIZATION) : "";
@@ -36,7 +34,6 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
         Authentication requestAuthentication = new UsernamePasswordAuthenticationToken(token, token);
         return this.getAuthenticationManager().authenticate(requestAuthentication);
     }
-
 
     @Override
     protected void successfulAuthentication(final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain, final Authentication authResult) throws IOException, ServletException {
