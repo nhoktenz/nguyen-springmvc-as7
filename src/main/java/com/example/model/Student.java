@@ -14,7 +14,7 @@ public class Student {
     private String lastName;
 
     @NotNull(message = "Date of birth is required")
-    @Past(message = "Date of birth must be in the past")
+    //@Past(message = "Date of birth must be in the past")
     private String dateOfBirth;
 
     @NotBlank(message = "Email is required")
