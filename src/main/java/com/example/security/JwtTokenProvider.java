@@ -16,7 +16,7 @@ import com.example.userService.*;;
 
 @Component
 public class JwtTokenProvider {
-    @Value("${spring.app.jwtSecret}")
+    @Value("${app.jwtSecret}")
     private String jwtSecret;
 
 

@@ -21,6 +21,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Autowired
     private UserRepository userRepository; // Inject your UserRepository here
 
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider; // Autowire JwtTokenProvider
+
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userDetailsService()).passwordEncoder(passwordEncoder());
@@ -33,7 +36,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.authorizeRequests()
             .antMatchers("/token").permitAll() // Permit access to token endpoint without authentication
             .anyRequest().authenticated(); // Require authentication for all other endpoints
-        // http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider)); // Apply JWT token filter
+         http.apply(new JwtTokenFilterConfigurer(jwtTokenProvider)); // Apply JWT token filter
     }
 
     @Bean
